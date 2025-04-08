@@ -1,113 +1,72 @@
 package Project7;
 
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Scanner;
 
-public class VMTranslator {
 
-    static int ALabelnum = 0;
-    static String fileName = "";
-
-    // Common assembly snippets
-    static String popD = "@SP\nAM=M-1\nD=M\n";
-    static String getM = "@SP\nA=M-1\n";
-    static String diffTrue = "D=M-D\nM=-1\n";
-    static String makeFalse = "@SP\nA=M-1\nM=0\n";
-    static String push = "@SP\nA=M\nM=D\n@SP\nM=M+1\n";
-
-    static Map<String, String> arithmeticOperators = Map.of(
-        "sub", "-", "add", "+", "and", "&", "or", "|", "neg", "-", "not", "!"
-    );
-
-    static Map<String, String> segmentCode = Map.of(
-        "argument", "ARG", "local", "LCL", "this", "THIS", "that", "THAT",
-        "temp", "5", "pointer", "3"
-    );
-
-    public static String unaryArithmetic(String[] command) {
-        String operator = arithmeticOperators.getOrDefault(command[0], command[0] + "not found");
-        return getM + "M=" + operator + "M\n";
-    }
-
-    public static String binaryArithmetic(String[] command) {
-        String operator = arithmeticOperators.getOrDefault(command[0], command[0] + "not found");
-        return popD + getM + "M=M" + operator + "D\n";
-    }
-
-    public static String conditional(String[] command) {
-        String name = "ALabel_" + ALabelnum++;
-        String jumpType = switch (command[0]) {
-            case "gt" -> "JGT";
-            case "eq" -> "JEQ";
-            case "lt" -> "JLT";
-            default -> "JMP";
-        };
-        String test = "@" + name + "\nD;" + jumpType + "\n";
-        String label = "(" + name + ")\n";
-        return popD + getM + diffTrue + test + makeFalse + label;
-    }
-
-    public static String pushFunction(String[] command) {
-        String segment = command[1];
-        String index = command[2];
-
-        if (segment.equals("constant")) {
-            return "@" + index + "\nD=A\n" + push;
-        } else if (segment.equals("static")) {
-            return "@" + fileName + "." + index + "\nD=M\n" + push;
-        } else {
-            String tempp = (segment.equals("temp") || segment.equals("pointer")) ? "A" : "M";
-            String pointer = segmentCode.getOrDefault(segment, "invalid segment: " + segment + "\n");
-            return "@" + index + "\nD=A\n@" + pointer + "\nA=" + tempp + "+D\nD=M\n" + push;
+public class VMtranslator {
+    public static ArrayList<File> getFiles(File dir){
+        File[] files = dir.listFiles();
+        ArrayList<File> final_result = new ArrayList<File>();
+        for (File file:files){
+            if (file.getName().endsWith(".vm")){
+                final_result.add(file);
+            }
         }
+        return final_result;
     }
 
-    public static String popFunction(String[] command) {
-        String segment = command[1];
-        String index = command[2];
-
-        if (segment.equals("constant")) {
-            throw new IllegalArgumentException("You cannot pop into a constant");
-        } else if (segment.equals("static")) {
-            return popD + "@" + fileName + "." + index + "\nM=D\n";
-        } else {
-            String tempp = (segment.equals("temp") || segment.equals("pointer")) ? "A" : "M";
-            String pointer = segmentCode.getOrDefault(segment, "invalid segment: " + segment + "\n");
-            return "@" + index + "\nD=A\n@" + pointer + "\nD=" + tempp + "+D\n@R13\nM=D\n"
-                 + popD + "@R13\nA=M\nM=D\n";
-        }
-    }
-
-    public static String translate(String line) {
-        String codeLine = line.split("//")[0].trim();
-        if (codeLine.isEmpty()) return "";
-
-        String[] command = codeLine.split(" ");
-        return switch (command[0]) {
-            case "add", "sub", "and", "or" -> binaryArithmetic(command);
-            case "neg", "not" -> unaryArithmetic(command);
-            case "eq", "gt", "lt" -> conditional(command);
-            case "push" -> pushFunction(command);
-            case "pop" -> popFunction(command);
-            default -> "\n//Error: " + command[0] + " not found \n\n";
-        };
-    }
-
-    public static void main(String[] args) throws IOException {
-        
+    public static void main(String[] args) {
         Scanner scan = new Scanner(System.in);
-        String arg = scan.nextLine();
-        fileName = new File(arg).getName().replace(".vm", "");
+        String ScanIn = scan.nextLine();
 
-        BufferedReader reader = new BufferedReader(new FileReader(arg + ".vm"));
-        BufferedWriter writer = new BufferedWriter(new FileWriter(arg + ".asm"));
+        File file_in = new File(ScanIn);
+        String file_out_path = "";
+        File file_out;
+        CodeWriter asm_writer;
 
-        String line;
-        while ((line = reader.readLine()) != null) {
-            writer.write(translate(line));
+        ArrayList<File> vm_files = new ArrayList<File>();
+        scan.close();
+
+        if (file_in.isFile()) {
+            String path = file_in.getAbsolutePath();
+            if (!Parser.getExt(path).equals(".vm")) {
+                throw new IllegalArgumentException("file needs to be .vm file");
+            }
+            vm_files.add(file_in);
+            file_out_path = file_in.getAbsolutePath().substring(0, file_in.getAbsolutePath().lastIndexOf(".")) + ".asm";
+        } 
+        else if (file_in.isDirectory()) {
+            vm_files = getFiles(file_in);
+            if (vm_files.size() == 0) {
+                throw new IllegalArgumentException("No .vm files in the directory");
+            }
+            file_out_path = file_in.getAbsolutePath() + "/" +  file_in.getName() + ".asm";
         }
 
-        reader.close();
-        writer.close();
+        file_out = new File(file_out_path);
+        asm_writer = new CodeWriter(file_out);
+
+        for (File file : vm_files) {
+            Parser parser = new Parser(file);
+            int command_type = -1;
+
+            while (parser.contains_commands()) {
+                parser.read();
+                command_type = parser.commandType();
+                if (command_type == Parser.ARITHMETIC) {
+                    asm_writer.writeArithmetic(parser.arg1());
+                } 
+                else if (command_type == Parser.POP || command_type == Parser.PUSH) {
+                    asm_writer.writePushPop(command_type, parser.arg1(), parser.arg2());
+                }
+            }
+        }
+        asm_writer.close();
+
+        System.out.println("asm file created at: " + file_out_path);
+    
     }
+
 }
