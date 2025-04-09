@@ -323,7 +323,7 @@ M=D-M
 AM=M-1
 D=M
 A=A-1
-M=M&D
+M=D&M
 @82
 D=A
 @SP
@@ -335,7 +335,7 @@ M=M+1
 AM=M-1
 D=M
 A=A-1
-M=M|D
+M=D|M
 @SP
 A=M-1
 M=!M

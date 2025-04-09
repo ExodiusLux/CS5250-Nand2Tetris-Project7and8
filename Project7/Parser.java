@@ -20,18 +20,18 @@ public class Parser {
     private int Type_arg;
     private String arg1;
     private int arg2;
-    public static final ArrayList<String> Arithmetic = new ArrayList<String>();
+    public static final ArrayList<String> ArithmeticCmds = new ArrayList<String>();
 
     static {
-        Arithmetic.add("add");
-        Arithmetic.add("sub");
-        Arithmetic.add("neg");
-        Arithmetic.add("eq");
-        Arithmetic.add("gt");
-        Arithmetic.add("lt");
-        Arithmetic.add("and");
-        Arithmetic.add("or");
-        Arithmetic.add("not");
+        ArithmeticCmds.add("add");
+        ArithmeticCmds.add("sub");
+        ArithmeticCmds.add("neg");
+        ArithmeticCmds.add("eq");
+        ArithmeticCmds.add("gt");
+        ArithmeticCmds.add("lt");
+        ArithmeticCmds.add("and");
+        ArithmeticCmds.add("or");
+        ArithmeticCmds.add("not");
     }
 
     public Parser(File fileIn) {
@@ -50,7 +50,7 @@ public class Parser {
             }
             commands = new Scanner(pre_processed.trim());
         } catch (FileNotFoundException e) {
-            System.out.println(e);
+            e.printStackTrace();
         }
 
     }
@@ -68,7 +68,7 @@ public class Parser {
         if (command_split.length > 3){
             throw new IllegalArgumentException("argument total exceeded");
         }
-        if (Arithmetic.contains(command_split[0])){
+        if (ArithmeticCmds.contains(command_split[0])){
             Type_arg = ARITHMETIC;
             arg1 = command_split[0];
         }
@@ -87,7 +87,7 @@ public class Parser {
             else if(command_split[0].equals("label")){
                 Type_arg = LABEL;
             }
-            else if(command_split[0].equals("if")){
+            else if(command_split[0].equals("if-goto")){
                 Type_arg = IF;
             }
             else if (command_split[0].equals("goto")){
@@ -105,7 +105,8 @@ public class Parser {
             if (Type_arg == PUSH || Type_arg == POP || Type_arg == FUNCTION || Type_arg == CALL){
                 try {
                     arg2 = Integer.parseInt(command_split[2]);
-                }catch (Exception e){
+                }
+                catch (Exception e){
                     throw new IllegalArgumentException(e);
                 }
             }
@@ -113,7 +114,7 @@ public class Parser {
 
     }
 
-    public int commandType(){
+    public int returnCommandType(){
         if (Type_arg != -1) {
             return Type_arg;
         }
@@ -123,46 +124,46 @@ public class Parser {
     }
 
     public String arg1(){
-        if (commandType() != RETURN){
+        if (returnCommandType() != RETURN){
             return arg1;
         }
         else {
-            throw new IllegalStateException("Can not get arg1 from a RETURN type command!");
+            throw new IllegalStateException("Can not get argument 1 from RETURN type");
         }
     }
 
     public int arg2(){
-        if (commandType() == PUSH || commandType() == POP || commandType() == FUNCTION || commandType() == CALL){
+        if (returnCommandType() == PUSH || returnCommandType() == POP || returnCommandType() == FUNCTION || returnCommandType() == CALL){
             return arg2;
         }
         else {
-            throw new IllegalStateException("Can not get arg2!");
+            throw new IllegalStateException("Can not get argument 2");
         }
     }
 
-    public static String TrimComment(String strIn){
-        int position = strIn.indexOf("//");
+    public static String TrimComment(String in_string){
+        int position = in_string.indexOf("//");
         if (position != -1){
-            strIn = strIn.substring(0, position);
+            in_string = in_string.substring(0, position);
         }
-        return strIn;
+        return in_string;
     }
 
-    public static String removeSpace(String strIn){
+    public static String removeSpace(String in_string){
         String final_result = "";
-        if (strIn.length() != 0){
-            String[] segs = strIn.split(" ");
-            for (String s: segs){
-                final_result += s;
+        if (in_string.length() != 0){
+            String[] segments = in_string.split(" ");
+            for (String seg: segments){
+                final_result += seg;
             }
         }
         return final_result;
     }
 
-    public static String getExt(String fileName){
-        int index = fileName.lastIndexOf('.');
+    public static String getExt(String file_name){
+        int index = file_name.lastIndexOf('.');
         if (index != -1){
-            return fileName.substring(index);
+            return file_name.substring(index);
         }
         else {
             return "";
