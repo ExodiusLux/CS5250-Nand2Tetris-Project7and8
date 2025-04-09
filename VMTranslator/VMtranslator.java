@@ -1,4 +1,4 @@
-package Project7;
+package VMTranslator;
 
 import java.io.File;
 import java.util.ArrayList;

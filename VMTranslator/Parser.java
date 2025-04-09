@@ -1,4 +1,4 @@
-package Project7;
+package VMTranslator;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
